@@ -1,0 +1,133 @@
+﻿<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no">
+
+    <title>GEO4DEV - Áreas e Comprimentos</title>
+
+    <link rel="stylesheet" href="http://js.arcgis.com/3.10/js/dojo/dijit/themes/tundra/tundra.css">
+    <link rel="stylesheet" href="http://js.arcgis.com/3.10/js/esri/css/esri.css">
+    <link rel="stylesheet" href="../stylesheets/index.css">
+
+    <script src="http://js.arcgis.com/3.10/"></script>
+    <script>
+
+        //declaração das libs a serem utilizadas
+        dojo.require("esri/map");
+        dojo.require("esri/graphic");
+        dojo.require('esri/toolbars/draw');
+        dojo.require('esri/layers/GraphicsLayer');
+        dojo.require('esri/symbols/SimpleFillSymbol');
+        dojo.require('esri/symbols/SimpleLineSymbol');
+        dojo.require('esri/tasks/GeometryService');
+        dojo.require('esri/tasks/AreasAndLengthsParameters');
+
+        //variáveis
+        var map
+        , graphicLayer
+        , geometryServer
+        , drawToolbar
+        , areasLengthsParameters
+        , geometries = [];
+
+        //chama a função quando todas as libs forem carregadas
+        dojo.ready(function () {
+
+            //inicializando o GEOMETRY SERVER
+            geometryServer = esri.tasks.GeometryService('http://servicesbeta.esri.com/ArcGIS/rest/services/Geometry/GeometryServer');
+
+            //criando a camada de gráficos e setando a renderização
+            graphicLayer = new esri.layers.GraphicsLayer();
+            graphicLayer.setRenderer(new esri.renderer.SimpleRenderer(
+                new esri.symbol.SimpleFillSymbol(
+                    esri.symbol.SimpleFillSymbol.STYLE_SOLID,
+                    new esri.symbol.SimpleLineSymbol(
+                        esri.symbol.SimpleLineSymbol.STYLE_SOLID,
+                        new dojo.Color([90, 90, 90, 0.5]),
+                        1),
+                    new dojo.Color([210, 105, 30, 0.5]))));
+
+            //inicializando o mapa
+            map = new esri.Map("map", {
+
+                basemap: "streets",
+                extent: new esri.geometry.Extent(
+                    {
+                        xmin: -9863530.134,
+                        ymin: -4389837.247,
+                        xmax: -2036378.437,
+                        ymax: 1480526.525,
+                        spatialReference: { wkid: 102100 }
+                    }
+                ),
+                slider: false
+            });
+            map.addLayer(graphicLayer);
+
+            //inicializando a ferramenta de desenho
+            drawToolbar = new esri.toolbars.Draw(map);
+            drawToolbar.activate(esri.toolbars.Draw.POLYGON);
+
+            //parâmetros
+            var areasLengthsParameters = new esri.tasks.AreasAndLengthsParameters();
+
+            //definindo a unidade de medida do comprimento do perímetro para metros 
+            //e da área para metros quadrados
+            areasLengthsParameters.lengthUnit = esri.tasks.GeometryService.UNIT_METER;
+            areasLengthsParameters.areaUnit = esri.tasks.GeometryService.UNIT_SQUARE_METERS;
+            areasLengthsParameters.calculationType = 'geodesic';
+            areasLengthsParameters.polygons = [];
+
+            //ao finalizar o desenho
+            drawToolbar.on('draw-end', function (res) {
+
+                //adicionando o gráfico no mapa
+                graphicLayer.add(new esri.Graphic(
+                    res.geometry,
+                    null,
+                    null));
+
+                //inserindo os polígonos que estão sendo desenhados na tela 
+                //para serem mensurados em comprimento e área
+                areasLengthsParameters.polygons.push(res.geometry);
+
+                //EXECUTANDO A MEDIÇÃO
+                geometryServer.areasAndLengths(areasLengthsParameters, function (res) {
+
+                    
+                    var content = dojo.byId('content');
+                    content.innerHTML = '';
+ 
+                    //para cada resposta
+                    for (var index = 0; index < res.areas.length; index++) {
+ 
+                        //apendando no conteúdo da box
+                        content.innerHTML +=
+                            '</br></br>' +
+                            'Geometria ' + (index + 1) + '</br>' +
+                            'Area: ' + res.areas[index] + ' m²</br>' +
+                            'Comprimento: ' + res.lengths[index] + ' m' ;
+ 
+                    }
+
+                });
+            });
+        });
+
+
+
+    </script>
+  </head>
+  <body class="tundra">
+    <div id="map">
+      <div id="info">
+        Desenhe no mapa um polígono
+          <div id="content">
+
+
+          </div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,142 @@
+﻿<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no">
+
+    <title>GEO4DEV - Simplificação de Geometria</title>
+
+    <link rel="stylesheet" href="http://js.arcgis.com/3.10/js/dojo/dijit/themes/tundra/tundra.css">
+    <link rel="stylesheet" href="http://js.arcgis.com/3.10/js/esri/css/esri.css">
+    <link rel="stylesheet" href="../stylesheets/index.css">
+
+    <script src="http://js.arcgis.com/3.10/"></script>
+    <script>
+
+        //declaração das libs a serem utilizadas
+        dojo.require("esri/map");
+        dojo.require("esri/graphic");
+        dojo.require('esri/toolbars/draw');
+        dojo.require('esri/layers/GraphicsLayer');
+        dojo.require('esri/symbols/SimpleFillSymbol');
+        dojo.require('esri/symbols/SimpleLineSymbol');
+        dojo.require('esri/tasks/GeometryService');
+        dojo.require('esri/tasks/AreasAndLengthsParameters');
+
+        //variáveis
+        var map
+        , graphicLayer
+        , geometryServer
+        , drawToolbar
+        , geometries = [];
+
+        //chama a função quando todas as libs forem carregadas
+        dojo.ready(function () {
+
+            //inicializando o GEOMETRY SERVER
+            geometryServer = esri.tasks.GeometryService('http://servicesbeta.esri.com/ArcGIS/rest/services/Geometry/GeometryServer');
+
+            //criando a camada de gráficos e setando a renderização
+            graphicLayer = new esri.layers.GraphicsLayer();
+            graphicLayer.setRenderer(new esri.renderer.SimpleRenderer(
+                new esri.symbol.SimpleFillSymbol(
+                    esri.symbol.SimpleFillSymbol.STYLE_SOLID,
+                    new esri.symbol.SimpleLineSymbol(
+                        esri.symbol.SimpleLineSymbol.STYLE_SOLID,
+                        new dojo.Color([90, 90, 90, 0.5]),
+                        1),
+                    new dojo.Color([210, 105, 30, 0.5]))));
+
+            //inicializando o mapa
+            map = new esri.Map("map", {
+
+                basemap: "streets",
+                extent: new esri.geometry.Extent(
+                    {
+                        xmin: -9863530.134,
+                        ymin: -4389837.247,
+                        xmax: -2036378.437,
+                        ymax: 1480526.525,
+                        spatialReference: { wkid: 102100 }
+                    }
+                ),
+                slider: false
+            });
+            map.addLayer(graphicLayer);
+
+            //ao carregar o mapa
+            map.on('load', function () {
+
+                //inicializando a ferramenta de desenho
+                drawToolbar = new esri.toolbars.Draw(map);
+                drawToolbar.activate(esri.toolbars.Draw.FREEHAND_POLYGON);
+
+
+                //ao finalizar o desenho
+                drawToolbar.on('draw-end', function (res) {
+
+                    //adicionando o gráfico no mapa
+                    graphicLayer.add(new esri.Graphic(
+                        res.geometry,
+                        null,
+                        null));
+                });
+            });
+
+            //ao clicar no botão limpar
+            clear.onclick = function () {
+                graphicLayer.clear();
+                var content = dojo.byId('content');
+                content.innerHTML = '';
+            }
+
+            //ao clicar no botão simplificar
+            simplify.onclick = function () {
+
+                //vetor de geometrias
+                var geometries = [];
+
+                //para cada geometria desenhada
+                for (var index = 0; index < graphicLayer.graphics.length; index++)
+                    //insere no vetor
+                    geometries.push(graphicLayer.graphics[index].geometry);
+
+                //Executando a Simplificação
+                geometryServer.simplify(geometries, function (simplifiedGeometries) {
+
+                    var content = dojo.byId('content');
+                    content.innerHTML = '';
+
+                    //para cada resposta
+                    for (var index = 0; index < geometries.length; index++) {
+
+                        //apendando no conteúdo da box
+                        content.innerHTML += '<br/>' +
+                        'Geometria ' + (index + 1) + ' Original     :' + geometries[index].rings.length + ' anel(is) <br/>' +
+                        'Geometria ' + (index + 1) + ' Simplificada :' + simplifiedGeometries[index].rings.length + ' anel(is) <br/>';
+
+                    }
+
+                }, function (error) {
+                    alert('Coloque uma geometrias com menos vértices para teste.');
+                    graphicLayer.clear();
+                });
+            }
+        });
+
+    </script>
+  </head>
+  <body class="tundra">
+    <div id="map">
+      <div id="info">
+          Desenhe no mapa um polígono<br />
+          <button id="simplify">Simplificar</button>
+          <button id="clear">Limpar</button>
+          <div id="content">
+
+
+          </div>
+      </div>
+    </div>
+  </body>
+</html>

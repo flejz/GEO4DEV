@@ -1,0 +1,142 @@
+﻿<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no">
+
+    <title>GEO4DEV - Distâncias</title>
+
+    <link rel="stylesheet" href="http://js.arcgis.com/3.10/js/dojo/dijit/themes/tundra/tundra.css">
+    <link rel="stylesheet" href="http://js.arcgis.com/3.10/js/esri/css/esri.css">
+    <link rel="stylesheet" href="../stylesheets/index.css">
+
+    <script src="http://js.arcgis.com/3.10/"></script>
+    <script>
+
+        //declaração das libs a serem utilizadas
+        dojo.require("esri/map");
+        dojo.require("esri/graphic");
+        dojo.require('esri/toolbars/draw');
+        dojo.require('esri/layers/GraphicsLayer');
+        dojo.require('esri/symbols/SimpleMarkerSymbol');
+        dojo.require('esri/symbols/SimpleLineSymbol');
+        dojo.require('esri/symbols/Font');
+        dojo.require('esri/tasks/GeometryService');
+        dojo.require('esri/tasks/AreasAndLengthsParameters');
+
+        //variáveis
+        var map
+        , graphicLayer
+        , textLayer
+        , lineLayer
+        , geometryServer
+        , distanceParameters
+        , geometries = []
+        , markerSymbol
+        , polylineSymbol
+        , textSymbol
+        , font
+        , polyline;
+
+        //chama a função quando todas as libs forem carregadas
+        dojo.ready(function () {
+
+            //inicializando o GEOMETRY SERVER
+            geometryServer = esri.tasks.GeometryService('http://servicesbeta.esri.com/ArcGIS/rest/services/Geometry/GeometryServer');
+
+            //criando a camada de gráficos e setando a renderização
+            graphicLayer = new esri.layers.GraphicsLayer();
+            textLayer = new esri.layers.GraphicsLayer();
+            lineLayer = new esri.layers.GraphicsLayer();
+
+            markerSymbol = new esri.symbol.SimpleMarkerSymbol(esri.symbol.SimpleMarkerSymbol.STYLE_CIRCLE, 15, new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([[90, 90, 90, 1]]), 1), new dojo.Color([210, 105, 30, 0.5]));
+            polylineSymbol = new esri.symbol.SimpleLineSymbol(esri.symbol.SimpleLineSymbol.STYLE_SOLID, new dojo.Color([[90, 90, 90, 1]]), 2);
+            font = new esri.symbol.Font("18px", esri.symbol.Font.STYLE_NORMAL, esri.symbol.Font.VARIANT_NORMAL, esri.symbol.Font.WEIGHT_BOLDER);
+
+            //inicializando o mapa
+            map = new esri.Map("map", {
+
+                basemap: "streets",
+                extent: new esri.geometry.Extent(
+                    {
+                        xmin: -9863530.134,
+                        ymin: -4389837.247,
+                        xmax: -2036378.437,
+                        ymax: 1480526.525,
+                        spatialReference: { wkid: 102100 }
+                    }
+                ),
+                slider: false
+            });
+            map.addLayer(graphicLayer);
+            map.addLayer(textLayer);
+            map.addLayer(lineLayer);
+
+//ao carregar o mapa
+            map.on('click', function (evt) {
+
+                //contador de números
+                var count = graphicLayer.graphics.length + 1;
+
+                //criando texto
+                textSymbol = new esri.symbol.TextSymbol(count, font, new dojo.Color([90, 90, 90]));
+                textSymbol.yoffset = 8;
+
+                //adicionando o ponto e o rótulo
+                graphicLayer.add(new esri.Graphic(evt.mapPoint, markerSymbol));
+                textLayer.add(new esri.Graphic(evt.mapPoint, textSymbol));
+
+                //se existirem dois pontos ou mais
+                if (graphicLayer.graphics.length >= 2) {
+
+                    //cria os parâmetros
+                    distanceParameters = new esri.tasks.DistanceParameters();
+                    distanceParameters.distanceUnit = esri.tasks.GeometryService.UNIT_KILOMETER;
+                    distanceParameters.geometry1 = graphicLayer.graphics[graphicLayer.graphics.length - 2].geometry;
+                    distanceParameters.geometry2 = graphicLayer.graphics[graphicLayer.graphics.length - 1].geometry;
+                    distanceParameters.geodesic = true;
+
+                    //desenha uma linha com os dois últimos pontos inseridos
+                    polyline = new esri.geometry.Polyline(map.spatialReference);
+                    polyline.addPath([distanceParameters.geometry1, distanceParameters.geometry2]);
+
+                    //adiciona a linha
+                    lineLayer.add(new esri.Graphic(polyline, polylineSymbol));
+
+                    //calcula a distância geodésica 
+                    geometryServer.distance(distanceParameters, function (distance) {
+
+                        var content = dojo.byId('content');
+
+                        //apendando no conteúdo da box
+                        content.innerHTML += '<br/>' +
+                        'Ponto ' + (count - 1) + ' a ' + count + ' : ' + dojo.number.format(distance, { places: 2 }) + ' km<br/>';
+                    });
+                }
+
+            });
+
+            //ao clicar no botão limpar
+            clear.onclick = function () {
+                graphicLayer.clear();
+                var content = dojo.byId('content');
+                content.innerHTML = '';
+            }
+
+        });
+
+    </script>
+  </head>
+  <body class="tundra">
+    <div id="map">
+      <div id="info">
+          Clique no mapa<br />
+          <button id="clear">Limpar</button>
+          <div id="content">
+
+
+          </div>
+      </div>
+    </div>
+  </body>
+</html>

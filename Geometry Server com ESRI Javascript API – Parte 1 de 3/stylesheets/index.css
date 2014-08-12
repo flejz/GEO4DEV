@@ -1,0 +1,48 @@
+
+      html, body, #map {
+        padding:0;
+        margin:0;
+        height:100%;
+        width: 100%;
+      }
+      #map {
+        position: relative;
+      }
+      #info {
+        background: rgba(255, 255, 255, 0.7);
+        border: 8px solid rgba(188, 255, 79, 0.5);
+        border-radius: 3px;
+        box-shadow: 0 0 5px #888;
+        left: 1em;
+        padding: 0.5em;
+        position: absolute;
+        top: 1em;
+        z-index: 40;    
+      }
+
+      #content {
+        -webkit-transition: width 200ms linear, height 200ms linear;
+        -ms-transition: width 200ms linear, height 200ms linear;
+        transition: width 200ms linear, height 200ms linear;
+      }
+
+    button
+    {
+        background-color: #fff;
+        border: 1px solid #000 ;
+        border-radius: 3px;
+        color: #000;
+        cursor: pointer;
+        font-weight: bold;
+        padding: 3px;
+        transition: 
+            border-color 200ms ease-out, 
+            background-color 200ms ease-out, 
+            color 200ms ease-out;
+    }   
+    button:hover
+    {
+        background-color: #2f5e00;
+        border: 1px solid #fff ;
+        color: #fff;
+    }
